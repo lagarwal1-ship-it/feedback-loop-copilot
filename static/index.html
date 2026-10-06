@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feedback Loop Copilot</title>
+<style>
+:root{--bg:#0b1020;--panel:#11182b;--line:#28324b;--text:#eef2ff;--muted:#aab4cd;--accent:#7dd3fc;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#0b1020,#121a2d);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+.wrap{max-width:1180px;margin:0 auto;padding:34px 24px 50px}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:24px}.eyebrow{letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-size:12px;font-weight:800}.title{font-size:36px;line-height:1.05;margin:7px 0 7px}.sub{color:var(--muted);max-width:760px;font-size:15px}.btn{border:1px solid #40607a;background:#172337;color:white;padding:11px 16px;border-radius:12px;font-weight:700;cursor:pointer}.btn:hover{background:#1c2b44}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.good{border-color:#346b4a;background:#143322}.btn.warn{border-color:#7a6324;background:#332b12}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.panel{background:rgba(17,24,43,.92);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.18)}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.metric{background:#0d1425;border:1px solid #202c45;border-radius:12px;padding:13px}.metric b{font-size:24px;display:block}.metric span{color:var(--muted);font-size:11px}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0}.step{padding:12px 10px;border-radius:10px;text-align:center;background:#0d1425;border:1px solid #202c45;font-size:12px}.step strong{display:block;font-size:13px;margin-bottom:3px}.failure{border-top:1px solid #202a40;padding:15px 0}.failure:first-child{border-top:0}.row{display:flex;justify-content:space-between;gap:12px}.badge{border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800}.high{background:rgba(248,113,113,.15);color:#fecaca}.medium{background:rgba(251,191,36,.13);color:#fde68a}.ok{background:rgba(134,239,172,.14);color:#bbf7d0}.blocked{background:rgba(248,113,113,.14);color:#fecaca}.detail{color:var(--muted);font-size:13px;line-height:1.45}.section-title{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}.artifact{background:#0b1221;border:1px solid #23304a;border-radius:12px;padding:12px;margin-top:10px}.artifact label{display:block;color:#7f8ca8;font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}.artifact p{margin:0;font-size:13px;line-height:1.45}.quote{font-size:20px;line-height:1.25;margin:18px 0 0}.footer{margin-top:14px;color:#7784a0;font-size:11px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.status{padding:12px;border-radius:12px;margin-top:12px;border:1px solid #30415d;background:#0d1425}.status.good{border-color:#2d6b45;background:#102a1a}.status.blocked{border-color:#704045;background:#2a1518}.tiny{font-size:11px;color:var(--muted)}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="eyebrow">TPM Demo · Week 7</div><div class="title">Feedback Loop Copilot</div><div class="sub">Failure → pattern → regression test → change → verification. The automation focuses on what happens <i>after</i> the agent acts.</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="simulateRuns()">1. Simulate agent runs</button><button class="btn" id="analyzeBtn" onclick="runAnalysis()" disabled>2. Analyze failures</button></div>
+  </div>
+  <div class="panel" id="dashboard">
+    <div class="metrics">
+      <div class="metric"><b id="m1">—</b><span>failures reviewed</span></div><div class="metric"><b id="m2">—</b><span>patterns found</span></div><div class="metric"><b id="m3">—</b><span>regression tests</span></div><div class="metric"><b id="m4">—</b><span>fixes verified</span></div><div class="metric"><b id="m5">—</b><span>still failing</span></div>
+    </div>
+    <div class="flow">
+      <div class="step"><strong>1 · Capture</strong>failed run / override</div><div class="step"><strong>2 · Analyze</strong>cluster + root cause</div><div class="step"><strong>3 · Change</strong>review + approve</div><div class="step"><strong>4 · Verify</strong>rerun against failure</div><div class="step"><strong>5 · Gate</strong>release only when green</div>
+    </div>
+    <div id="simulator" class="artifact" style="display:none;margin-top:16px"></div>
+    <div id="gate" class="status blocked" style="display:none"></div>
+    <div class="quote">“The real automation opportunity is not the agent’s action. It’s everything that happens after the action.”</div>
+  </div>
+  <div class="grid" style="margin-top:18px">
+    <div class="panel"><div class="section-title">Failure stream</div><div id="failures"><div class="tiny">Simulate agent runs to create the failure stream.</div></div></div>
+    <div class="panel"><div class="section-title">Feedback → Change</div><div id="changes"><div class="tiny">Analyze failures to generate patterns, tests, and proposed changes.</div></div><div id="verifyArea" style="display:none;margin-top:14px"><button class="btn good" onclick="verifyFixes()">4. Verify approved fixes</button></div></div>
+  </div>
+  <div class="footer">Demo uses synthetic failures. Feedback is simulated as an accountable human approval step. No production agent or customer data is required.</div>
+</div>
+<script>
+function esc(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));}
+async function simulateRuns(){
+  const r=await fetch('/api/simulate'); const d=await r.json();
+  simulator.style.display='block';
+  simulator.innerHTML='<label>Simulated agent runs</label>'+d.runs.map(x=>`<div style="margin:9px 0;padding:10px;border:1px solid #23304a;border-radius:10px"><div><strong>${esc(x.id)}</strong> · <span class="badge ${x.severity.toLowerCase()}">${esc(x.severity)}</span></div><div class="detail"><b>Task:</b> ${esc(x.task)}</div><div class="detail"><b>Agent did:</b> ${esc(x.agent_decision)}</div><div class="detail"><b>Should have done:</b> ${esc(x.expected_behavior)}</div></div>`).join('');
+  analyzeBtn.disabled=false; gate.style.display='none';
+  changes.innerHTML='<div class="tiny">Agent failures captured. Click “Analyze failures” to start the feedback loop.</div>';
+  failures.innerHTML='<div class="tiny">3 simulated failures captured.</div>';
+  verifyArea.style.display='none';
+  setMetrics(null);
+}
+function setMetrics(d){
+  m1.textContent=d?d.failures_reviewed:'—';m2.textContent=d?Object.keys(d.patterns).length:'—';m3.textContent=d?d.regression_tests_added:'—';m4.textContent=d?d.fixes_verified:'—';m5.textContent=d?d.still_failing:'—';
+}
+async function runAnalysis(){
+  const r=await fetch('/api/demo'); const d=await r.json(); setMetrics(d); render(d);
+}
+function render(d){
+  gate.style.display='block'; gate.className='status '+(d.release_gate==='GREEN'?'good':'blocked'); gate.innerHTML=`<b>Release gate: ${esc(d.release_gate)}</b><div class="tiny">${d.release_gate==='GREEN'?'All identified patterns are fixed and verified. Safe to move forward.':'Approval and verification are still outstanding. Do not release yet.'}</div>`;
+  const groups={}; d.items.forEach(x=>{groups[x.analysis.failure_category] ??=[]; groups[x.analysis.failure_category].push(x)});
+  failures.innerHTML=d.items.map(x=>`<div class="failure"><div class="row"><strong>${esc(x.id)} · Simulated Agent</strong><span class="badge ${x.severity.toLowerCase()}">${esc(x.severity)}</span></div><div class="detail">${esc(x.actual)}</div><div class="artifact"><label>Pattern</label><p>${esc(x.analysis.failure_category)}</p></div></div>`).join('');
+  changes.innerHTML=Object.entries(groups).map(([category,items])=>{
+    const x=items[0]; const fx=x.fix; const approved=d.approved_patterns.includes(category); const verified=d.verified_patterns.includes(category);
+    return `<div class="failure"><div class="row"><strong>${esc(category)}</strong><span class="badge ${verified?'ok':approved?'medium':'high'}">${verified?'VERIFIED':approved?'APPROVED':'PROPOSED'}</span></div><div class="detail">${items.length} failure${items.length>1?'s':''} map to this pattern · Test <b>${esc(fx.test_id)}</b></div><div class="artifact"><label>Root cause</label><p>${esc(x.analysis.likely_root_cause)}</p></div><div class="artifact"><label>Regression test · ${esc(fx.test_id)}</label><p>${esc(x.analysis.regression_test)}</p></div><div class="artifact"><label>Proposed change · ${esc(fx.fix_id)}</label><p>${esc(fx.change)}</p></div><div class="actions">${approved?'<span class="tiny">Human feedback recorded: change approved.</span>':`<button class="btn warn" onclick='approveFix(${JSON.stringify(category)})'>3. Approve & apply fix</button>`}</div>${verified?'<div class="artifact"><label>Verification</label><p>Same failure pattern reran after the fix and passed.</p></div>':''}</div>`;
+  }).join('');
+  verifyArea.style.display=d.approved_patterns.length?'block':'none';
+}
+async function approveFix(category){
+  const r=await fetch('/api/apply-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pattern:category})});
+  const d=await r.json(); setMetrics(d); render(d);
+}
+async function verifyFixes(){
+  const r=await fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); const d=await r.json(); setMetrics(d); render(d);
+}
+</script>
+</body></html>
