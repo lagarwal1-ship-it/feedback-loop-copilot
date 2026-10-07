@@ -1,34 +1,52 @@
-# Feedback Loop Copilot — Principal TPM Prototype
+# Feedback Loop Copilot — TPM Prototype
 
-A deliberately small prototype for an **AI reliability operating model**:
+A lightweight prototype for a feedback loop that turns agent failures into regression tests, approved changes, verification, and release gates.
 
 > **Failure → Pattern → Regression Test → Human Approval → Verification → Release Gate**
 
-The implementation is intentionally lightweight. The goal is not to simulate a production AI platform; it is to make the **operating mechanism** concrete and inspectable.
+The implementation is intentionally small. The goal is to make the **operating mechanism** concrete and inspectable, not to simulate a production AI platform.
 
-## Why this exists
+## What the prototype demonstrates
 
-A capable agent is not enough. As AI systems act in the real world, the organization needs a repeatable way to learn from failures, encode those learnings as regression coverage, make accountable changes, and require evidence before release.
+The demo uses three synthetic agent failures:
 
-This prototype demonstrates that loop using three synthetic agent failures:
+- **SIM-01 — High:** A $1,200 refund is approved without required manager approval.
+- **SIM-02 — High:** A $900 refund is processed directly after an eligibility check, again bypassing manager approval.
+- **SIM-03 — Medium:** Ambiguous support language is treated as permission to issue an irreversible credit.
 
-- A refund bypasses a manager-approval policy.
-- A second refund bypasses the same control, demonstrating pattern clustering.
-- Ambiguous support language is treated as permission for an irreversible credit.
+The prototype then:
 
-The demo then turns those failures into two recurring patterns, two regression tests, proposed changes, a human approval step, and a verification result.
+1. Captures the failures and expected behavior.
+2. Clusters them into two recurring patterns.
+3. Creates two regression tests.
+4. Proposes two changes.
+5. Requires a simulated accountable human approval.
+6. Replays the same failure patterns against the proposed controls.
+7. Turns the release gate **GREEN** only after verification passes.
 
-## What to look for
+## System framing
 
-This project is intentionally **not** trying to impress through code volume. Review the system design:
+The important artifact is the operating model around the model:
 
-1. **Capture** — preserve the failure and expected behavior.
-2. **Analyze** — cluster similar failures and identify a likely root cause.
-3. **Change** — create durable regression coverage and an accountable approval step.
-4. **Verify** — replay the same failure pattern against the changed behavior.
-5. **Gate** — keep release blocked until required evidence is green.
+```text
+Failure
+   ↓
+Pattern
+   ↓
+Regression Test
+   ↓
+Human Approval
+   ↓
+Verification
+   ↓
+Release Gate
+```
 
-See [`docs/architecture.md`](docs/architecture.md), [`docs/operating-model.md`](docs/operating-model.md), [`docs/evaluation.md`](docs/evaluation.md), [`docs/risk-and-release-gates.md`](docs/risk-and-release-gates.md), and [`docs/decisions.md`](docs/decisions.md).
+The broader feedback loop is:
+
+```text
+Observe → Act → Evaluate → Learn → Adjust
+```
 
 ## Repository structure
 
@@ -53,31 +71,19 @@ feedback-loop-copilot/
     └── index.html
 ```
 
-## Run locally — Mac first
+## Run locally
 
-### Option A: Finder
-
-1. Download the ZIP from GitHub.
-2. Open **Downloads**.
-3. Double-click the ZIP to extract it.
-4. Open **Terminal**.
-5. Type `cd ` (including the space), drag the extracted `feedback-loop-copilot` folder into Terminal, and press **Return**.
-6. Continue with the setup below.
-
-### Option B: Terminal
-
-```bash
-cd ~/Downloads
-unzip feedback-loop-copilot.zip
-cd feedback-loop-copilot
-```
-
-### Set up the environment
+### 1. Create a virtual environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### 2. Start the app
+
+```bash
 python app.py
 ```
 
@@ -85,95 +91,44 @@ Open:
 
 `http://127.0.0.1:8000`
 
-Keep the Terminal process running while the browser demo is open.
+The default demo is fully local and deterministic. It does not require an API key and does not make external API calls.
 
 ## Demo sequence
 
-Click the controls in this order:
+Use the controls in this order:
 
-**1. Simulate agent runs**  
-Creates three synthetic failures.
+**1. Simulate agent runs** — creates the three synthetic failures.
 
-**2. Analyze failures**  
-Clusters them into recurring patterns and creates regression tests.
+**2. Analyze failures** — clusters the failures into two patterns and creates two regression tests.
 
-**3. Approve & apply fix**  
-Represents the accountable human review / change-approval step.
+**3. Approve & apply fix** — represents accountable human review and approval of the proposed changes.
 
-**4. Verify approved fixes**  
-Replays the failure patterns and records whether the new controls pass.
+**4. Verify approved fixes** — replays the same failure patterns and records the verification result.
 
-The release gate turns **GREEN** only after the approved patterns are verified.
+The release gate remains **BLOCKED** until the approved changes are verified.
 
-## Run the tests
-
-The test suite validates the core loop without starting the web server:
+## Test the workflow
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Expected result: all tests pass, including the blocked-to-green release transition.
+The tests cover the blocked-to-green release transition and the expected regression outcomes.
 
-## Optional model-backed analysis
-
-The default demo uses deterministic local analysis and makes no external API calls.
-
-To experiment with model-backed analysis, set one API key in your shell before starting the server:
-
-```bash
-export OPENAI_API_KEY="your-key-here"
-python app.py
-```
-
-or:
-
-```bash
-export ANTHROPIC_API_KEY="your-key-here"
-python app.py
-```
-
-The provider-specific endpoint is already isolated in `app.py`; the public demo does not require a key.
-
-**Never commit API keys.** Use environment variables or an untracked local `.env` file if you add one. `.gitignore` excludes common secret/local-development files.
-
-## Public-sharing / privacy notes
+## Safety and privacy
 
 This repository is designed as a public-safe prototype:
 
 - Synthetic failures only.
-- No customer records, production logs, or company-specific data.
-- No real API keys or credentials.
-- No local machine usernames or absolute user paths.
-- Default mode makes no external network call.
+- No customer records or production logs.
+- No company-specific operational data.
+- No API keys or credentials.
+- No external API calls in the default mode.
 
-Before adding organization-specific examples, run a repository secret scan and remove proprietary identifiers or real operational data.
+Do not add secrets, private customer data, production traces, or proprietary identifiers to the repository.
 
-## Principal-level system framing
+## What would change in production
 
-The code is intentionally small. The deeper artifact is the **operating model around the model**.
+A production implementation would connect this operating model to real telemetry, evaluation systems, identity-aware ownership, incident workflows, CI/CD, approval evidence, policy controls, and historical regression data.
 
-The prototype establishes explicit answers to:
-
-- **What counts as a failure?** — a mismatch between observed agent behavior and the expected control / outcome.
-- **Who owns the response?** — a named accountable role, not a vague "team".
-- **How fast should feedback return?** — measured as failure-to-test and failure-to-verified-fix latency.
-- **What changes?** — a durable control plus a regression test, not only an incident note.
-- **What blocks release?** — severity-aware gates defined in [`docs/risk-and-release-gates.md`](docs/risk-and-release-gates.md).
-
-The production path would connect these concepts to real agent telemetry, incident systems, CI/CD, policy controls, ownership systems, and historical evaluation data.
-
-## Production evolution
-
-A production implementation would add, at minimum:
-
-- Real agent/tool traces and human-override events.
-- Persistent failure and regression-test storage.
-- Identity-aware ownership and SLA tracking.
-- Automated regression execution in CI/CD.
-- Evidence and audit history for approvals.
-- Severity-aware and workflow-specific release gates.
-- Metrics for recurrence, coverage, and mean time from failure to verified fix.
-- Governance around when AI may recommend versus automatically apply changes.
-
-This repository intentionally stops before those production integrations.
+The prototype intentionally stops before those integrations.

@@ -5,35 +5,43 @@ import app
 
 class FeedbackLoopTests(unittest.TestCase):
     def setUp(self):
-        app.reset_state()
+        app.STATE = app.initial_state()
+        self.client = app.app.test_client()
 
-    def test_capture_creates_three_simulated_failures(self):
-        self.assertEqual(len(app.state["runs"]), 3)
-        self.assertEqual({r["id"] for r in app.state["runs"]}, {"SIM-01", "SIM-02", "SIM-03"})
+    def test_release_starts_blocked(self):
+        response = self.client.get("/api/state")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["release_gate"], "BLOCKED")
 
-    def test_analysis_clusters_failures_into_two_patterns(self):
-        result = app.analyze_current_runs()
-        self.assertEqual(result["failures_reviewed"], 3)
-        self.assertEqual(result["patterns"]["Policy / approval enforcement"], 2)
-        self.assertEqual(result["patterns"]["Ambiguity / intent resolution"], 1)
-        self.assertEqual(result["regression_tests_added"], 2)
-        self.assertEqual(result["release_gate"], "BLOCKED")
+    def test_full_feedback_loop_reaches_green(self):
+        self.assertEqual(self.client.post("/api/simulate").status_code, 200)
 
-    def test_release_gate_stays_blocked_until_both_patterns_are_approved(self):
-        app.analyze_current_runs()
-        app.apply_fix("Policy / approval enforcement")
-        result = app.build_result()
-        self.assertEqual(result["fixes_verified"], 0)
-        self.assertEqual(result["release_gate"], "BLOCKED")
+        analyzed = self.client.post("/api/analyze")
+        self.assertEqual(analyzed.status_code, 200)
+        body = analyzed.get_json()
+        self.assertEqual(len(body["failures"]), 3)
+        self.assertEqual(len(body["patterns"]), 2)
+        self.assertEqual(len(body["regression_tests"]), 2)
+        self.assertEqual(len(body["proposed_fixes"]), 2)
+        self.assertEqual(body["release_gate"], "BLOCKED")
 
-    def test_verification_turns_gate_green_after_all_approved_patterns_pass(self):
-        app.analyze_current_runs()
-        app.apply_fix("Policy / approval enforcement")
-        app.apply_fix("Ambiguity / intent resolution")
-        result = app.verify_fixes()
-        self.assertEqual(result["fixes_verified"], 2)
-        self.assertEqual(result["still_failing"], 0)
-        self.assertEqual(result["release_gate"], "GREEN")
+        approved = self.client.post("/api/approve")
+        self.assertEqual(approved.status_code, 200)
+        self.assertTrue(approved.get_json()["approved"])
+        self.assertEqual(approved.get_json()["release_gate"], "BLOCKED")
+
+        verified = self.client.post("/api/verify")
+        self.assertEqual(verified.status_code, 200)
+        body = verified.get_json()
+        self.assertEqual([item["status"] for item in body["verification"]], ["PASS", "PASS"])
+        self.assertEqual(body["release_gate"], "GREEN")
+
+    def test_verify_requires_human_approval(self):
+        self.client.post("/api/simulate")
+        self.client.post("/api/analyze")
+        response = self.client.post("/api/verify")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("approval", response.get_json()["error"].lower())
 
 
 if __name__ == "__main__":

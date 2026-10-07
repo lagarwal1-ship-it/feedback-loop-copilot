@@ -1,47 +1,14 @@
-# Evaluation and Metrics
+# Evaluation
 
-A feedback loop should be measurable. The goal is to reduce recurrence and shorten the time between a failure being observed and the organization learning from it.
+The prototype is deliberately small, but it exposes the signals that would matter in a production feedback loop.
 
-## Core metrics
+| Metric | Definition |
+|---|---|
+| Failure recurrence rate | Percentage of previously observed failure patterns that recur after a change |
+| Failure-to-test latency | Time from failure capture to durable regression coverage |
+| Failure-to-verified-fix latency | Time from failure capture to verified corrective change |
+| Regression coverage | Share of known high-severity patterns represented by executable checks |
+| Open high-severity failures | Count of unresolved high-severity patterns |
+| Release-blocking failures | Count of failures currently preventing release |
 
-| Metric | Definition | Why it matters |
-|---|---|---|
-| Failure recurrence rate | % of failures that repeat the same known pattern after a fix | Measures whether learning is durable |
-| Failure → test latency | Median time from first failure to regression test creation | Measures learning speed |
-| Failure → verified-fix latency | Median time from first failure to verified fix | Measures operational responsiveness |
-| Regression coverage | % of high-severity failure patterns represented by executable tests | Measures prevention maturity |
-| Open high-severity failures | Count of unresolved high-severity patterns | Measures current release risk |
-| Release-blocking failures | Count of failures that should prevent shipment | Measures governance effectiveness |
-| Verification pass rate | % of approved fixes that pass their defined verification suite | Detects weak or incomplete changes |
-| Human override rate | % of agent actions requiring human intervention | Indicates where autonomy is still fragile |
-
-## Suggested dashboard
-
-For a production program, show at least:
-
-```text
-Failure recurrence         ↓
-Failure → test latency     ↓
-Failure → verified fix     ↓
-Regression coverage        ↑
-High-severity open         ↓
-Release-blocking failures  ↓
-Verification pass rate     ↑
-Human override rate        ↓ (unless intentionally targeted)
-```
-
-## Example target framework
-
-Targets should be set per workflow, but a useful starting pattern is:
-
-- P0 / safety-critical: zero unresolved at release.
-- P1 / financial or policy: zero unresolved in the affected workflow.
-- P2 / quality: monitored with explicit owner and SLA.
-
-## Measurement caution
-
-A lower incident count does not automatically mean a safer system. Reporting behavior can change, exposure can change, and test coverage can change.
-
-Pair outcome metrics with evidence metrics:
-
-**incidents + override rate + coverage + verification quality + release gates**.
+The demo itself exercises the last two stages: approved regression tests pass and the release gate changes from **BLOCKED** to **GREEN**.

@@ -1,81 +1,43 @@
 # Architecture
 
-## System view
+## Purpose
+
+This prototype separates the reliability loop into explicit states rather than treating a failure as a log-only event.
 
 ```text
-                         ┌──────────────────────┐
-                         │   Agent / Robot /    │
-                         │   Vehicle action     │
-                         └──────────┬───────────┘
-                                    │ observed outcome
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Failure Capture    │
-                         │ expected vs. actual  │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │  Pattern Analysis    │
-                         │ cluster + root cause │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Regression Coverage  │
-                         │ test + policy change │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Human Accountability │
-                         │ review + approval    │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │     Verification     │
-                         │ replay failure set   │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │     Release Gate     │
-                         │ evidence before ship │
-                         └──────────────────────┘
+Synthetic agent run
+        |
+        v
+   Failure capture
+        |
+        v
+ Pattern clustering ----> Regression tests
+        |
+        v
+  Proposed controls
+        |
+        v
+ Human approval
+        |
+        v
+ Verification / replay
+        |
+        v
+ Release gate
 ```
 
-## Core entities
+## Design choice
 
-| Entity | Purpose |
-|---|---|
-| Failure | Immutable record of an observed mismatch between expected and actual behavior |
-| Pattern | Recurring failure class that may warrant a systemic fix |
-| Regression Test | Executable evidence that the failure category is handled correctly |
-| Proposed Change | Guardrail, workflow, policy, prompt, or code change intended to prevent recurrence |
-| Approval | Explicit accountable human decision to apply the proposed change |
-| Verification | Evidence that the same failure pattern passes after the change |
-| Release Gate | Policy that determines whether the affected workflow may ship |
+The demo uses deterministic local logic instead of an external model. This keeps the failure-to-gate path observable and reproducible while making it easy to replace any stage with a production system later.
 
-## Data flow
+## Production boundary
 
-1. The agent acts.
-2. The system captures expected behavior, observed behavior, severity, and context.
-3. AI or deterministic analysis proposes a category and likely root cause.
-4. Similar failures are clustered into a pattern.
-5. The pattern generates durable regression coverage and a proposed change.
-6. An accountable reviewer approves, rejects, or edits the change.
-7. The regression set is replayed.
-8. Evidence is evaluated against the release policy.
-9. The workflow is released only when its gate is satisfied.
+A production implementation would connect the same states to:
 
-## Trust boundaries
-
-- **Agent action:** untrusted until evaluated.
-- **AI recommendation:** advisory until human approval or an explicitly governed automation policy allows automatic application.
-- **Regression evidence:** required before release.
-- **Release gate:** policy-controlled decision point.
-
-## Prototype boundary
-
-The current demo uses in-memory state and synthetic failures. A production design would persist events and evidence and integrate with CI/CD, incident systems, telemetry, and access-controlled approval workflows.
+- agent/tool traces,
+- evaluation and incident systems,
+- identity-aware ownership,
+- CI/CD regression execution,
+- approval evidence and audit history,
+- policy enforcement points, and
+- persistent historical evaluation data.

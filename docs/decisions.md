@@ -1,39 +1,25 @@
-# Design Decisions
+# Decisions
 
-## 1. Why a simulated agent?
+## Deterministic local analysis
 
-The prototype is meant to demonstrate the feedback-loop operating model without requiring access to a production agent, confidential telemetry, or customer data.
+**Decision:** Keep the demo deterministic and local.
 
-The simulated agent intentionally produces realistic failures so the downstream process can be evaluated end to end.
+**Why:** The objective is to show the reliability operating mechanism, not model-provider integration. Determinism makes the demo repeatable and makes verification evidence easier to inspect.
 
-## 2. Why deterministic local analysis by default?
+## Human approval is explicit
 
-A public demo should be reproducible, inexpensive, and safe to run without credentials.
+**Decision:** Approval is a distinct workflow state.
 
-The code includes optional OpenAI / Anthropic integration for experimentation, but the core demo does not depend on an external model.
+**Why:** A proposed change should not silently become a deployed change. Production implementations should attach identity, evidence, and audit history to this step.
 
-## 3. Why human approval?
+## Regression tests precede release
 
-The prototype separates **AI recommendation** from **authorization to change behavior**.
+**Decision:** A known failure pattern becomes a regression test before verification can pass.
 
-That makes the accountability boundary visible and avoids implying that the model should unilaterally rewrite production behavior.
+**Why:** The organization should encode the lesson so the same class of failure is less likely to recur.
 
-## 4. Why regression tests instead of only tickets?
+## Small implementation
 
-An incident record describes what happened. A regression test creates durable evidence that the organization learned from it.
+**Decision:** Keep the code intentionally lightweight.
 
-The desired transition is:
-
-> incident → learning → executable evidence
-
-## 5. Why cluster failures?
-
-SIM-01 and SIM-02 are intentionally different incidents with the same systemic failure. Treating them as one pattern demonstrates that the loop should reduce recurrence at the **category** level rather than produce one-off fixes.
-
-## 6. Why a release gate?
-
-Without a release policy, learning remains advisory. The gate makes the feedback loop consequential: the system cannot claim a fix is complete until the evidence passes.
-
-## 7. Why is the implementation small?
-
-The prototype is intentionally scoped to illustrate system design rather than infrastructure complexity. A production implementation would introduce persistent storage, identity, audit history, CI/CD integration, real telemetry, security controls, and workflow-specific policy enforcement.
+**Why:** The useful abstraction is the operating model around the agent. More code would not by itself make the reliability model more credible.
